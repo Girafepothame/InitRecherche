@@ -8,31 +8,48 @@ import os
 import glob
 
 
-def load(file):
+def load_image(file):
     res = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
     return res
 
-def erosion_image(image, structural_elem = 'None'):   
-  if structural_elem != 'None':
-    return cv2.erosion(image, structural_elem)
-  else:
-    return cv2.erosion(image)
+def invert_image(img):
+    return 255-img
 
-def dilation_image(image, structural_elem = 'None'):  
-  if structural_elem != 'None':
-    return cv2.dilation(image, structural_elem)
-  else:
-    return cv2.dilation(image)
+def skeletonize_image(img):
+    # Invert the image to work with white letters on black and not white areas creating a black letter
+    img = invert_image(img)
+    size = np.size(img)
+    # Create
+    skel = np.zeros(img.shape, np.uint8)
+    
+    # Already binarised images but still needed for other cases
+    ret, img = cv2.threshold(img, 127, 255, cv2.THRESH_BINARY)
+    
+    # Cross-pattern kernel 3x3
+    kernel = cv2.getStructuringElement(cv2.MORPH_CROSS, (3,3))
+    
+    done = False
+    while not(done):
+        # We don't use the openin method because we need the eroded image later
+        eroded = cv2.erode(img,kernel)
+        temp = cv2.dilate(eroded,kernel)
+        temp = cv2.subtract(img,temp)
+        skel = cv2.bitwise_or(skel,temp)
+        img = eroded.copy()
+        zeros = size - cv2.countNonZero(img)
+        if zeros==size:
+            done = True
+        
+    return skel
+    
+    
 
-def opening_image(image, structural_elem = 'None'):
-  if structural_elem != 'None':
-    return cv2.opening(image, structural_elem)
-  else:
-    return cv2.opening(image)
+# Return all files from "path" directory (default all png files)
+def char_paths(path = "dataset/dataset_caracters"):
+    return glob.glob(path + "/**/*.png", recursive=True)
 
-def closing_image(image, structural_elem = 'None'):
-  if structural_elem != 'None':
-    return cv2.closing(image, structural_elem)
-  else:
-    return cv2.closing(image)
 
+def img_tab(tab, car):
+    return [load_image(image) for image in tab[car]]
+    
+    
