@@ -19,16 +19,18 @@ def main():
     for i in range(ord('a'), ord('z')+1):
         pathtab[chr(i)] = char_paths(PATH+"/"+chr(i))
         
-    char_tab = img_tab(pathtab, 'w')
+    char_tab = img_tab(pathtab, 'a')
     affiche_tab(char_tab)
     bin_tab = []
     inv_tab = []
     skel_tab = []
     for char in char_tab:
-        inv = invert_image(char)
-        inv_tab.append(inv)
-        skel = skeletonize(inv, method = "lee")
-        skel_tab.append(skel)
+        # bin = cv2.threshold(char, 127, 255, cv2.THRESH_BINARY)
+        # bin_tab.append(bin)
+        char = invert_image(char)
+        inv_tab.append(char)
+        char = skeletonize(char, method = "lee")
+        skel_tab.append(char)
         
     affiche_tab(inv_tab)
     affiche_tab(skel_tab)
