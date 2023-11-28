@@ -19,21 +19,25 @@ def main():
     for i in range(ord('a'), ord('z')+1):
         pathtab[chr(i)] = char_paths(PATH+"/"+chr(i))
         
-    char_tab = img_tab(pathtab, 'a')
-    affiche_tab(char_tab)
-    bin_tab = []
+    char_tab = img_tab(pathtab, 'j')
+    # affiche_tab(char_tab)
     inv_tab = []
     skel_tab = []
+    min_tab = []
     for char in char_tab:
-        # bin = cv2.threshold(char, 127, 255, cv2.THRESH_BINARY)
-        # bin_tab.append(bin)
-        char = invert_image(char)
-        inv_tab.append(char)
-        char = skeletonize(char, method = "lee")
-        skel_tab.append(char)
-        
-    affiche_tab(inv_tab)
+        inv = invert_image(char)
+        inv_tab.append(inv)
+        skel = skeletonize(inv, method = "lee")
+        skel_tab.append(skel)
+        min = minutia_extraction(skel)
+        print(min)
+        print(findFirst(skel))
+        min = draw_minutia(min, skel)
+        min_tab.append(min)        
+    
+    # freeman_encode(skel_tab[0])
     affiche_tab(skel_tab)
+    affiche_tab(min_tab)
     
     
 if __name__ == "__main__":
