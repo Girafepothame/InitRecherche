@@ -30,24 +30,11 @@ def char_paths(path = "dataset/dataset_caracters"):
 def img_tab(tab, car):
     return [load_image(image) for image in tab[car]]
 
-def freeman_encode(img):
-    temp = img.copy()
-    code = ""
+def freeman_encode(minutia, img):
+    directions = []
     car = []
     
-    car.append(findFirst(img))
     
-                
-def findFirst(img):
-    min = minutia_extraction(img)
-    height, width = img.shape
-    for i in range(height):
-        for j in range(width):
-            if img[i][j] == 255:
-                for m in min:
-                    if (i, j) != (m[0], m[1]):
-                        print(i, j, m[0], m[1])
-                        return i, j
             
 def minutia_extraction(im_skeleton):
     minutia = []
@@ -89,6 +76,47 @@ def draw_minutia(minutia, im_skeleton):
     im_skeleton_color = gray2rgb(im_skeleton)
     # Looping through the minutias collected
     for m in minutia:
+        # Colorize the pixel in red
         im_skeleton_color[m[0]][m[1]] = (255, 0, 0)
     return im_skeleton_color
 
+# Distance between two points of an image
+def euclidean_distance_minutia(m1, m2):
+    return math.sqrt((m1[0] - m2[0])*(m1[0] - m2[0]) + (m1[1] - m2[1])*(m1[1] - m2[1]))
+
+# delete serif (small parts of character) which size is inferior to the threshold - return the table of the minutia where the code will be generated between
+def smoothing(minutia, threshold):
+    smooth_minutia = []
+    ending_points = []
+    smooth_ending_points = []
+    pb = []
+
+    # Add all ending points to the right array
+    for m in minutia:
+        if m[2] != 1:
+            smooth_minutia.append(m)
+        else:
+            ending_points.append(m)
+
+    # Case where only ending points
+    if smooth_minutia == []:
+        return minutia
+    # Else
+    else:
+        for m in ending_points:
+            i = 0
+            # Test the length of the *serif* we are analysing (between the current ending point and the next non-ending minutia)
+            while (i < len(smooth_minutia)) and (euclidean_distance_minutia(m, smooth_minutia[i]) > threshold):
+                i += 1
+            if (i == len(smooth_minutia)):
+                smooth_ending_points.append(m)
+            else:
+                pb.append(smooth_minutia[i])
+                
+    # removing duplicates
+    pb = list(set(pb))
+
+    for m in pb:
+        smooth_minutia.remove(m)
+
+    return smooth_minutia + smooth_ending_points
