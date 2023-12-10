@@ -30,9 +30,24 @@ def char_paths(path = "dataset/dataset_caracters"):
 def img_tab(tab, car):
     return [load_image(image) for image in tab[car]]
 
-def freeman_encode(minutia, img):
-    directions = []
-    car = []
+def start_point(skel_img):
+    smooth_minutia = smoothing(minutia_extraction(skel_img), 15)
+    return smooth_minutia[0]
+
+def freeman_encode(skel_img):
+    directions = [0, 1, 2,
+                  7,    3,
+                  6, 5, 4]
+    dir2idx = dict(zip(directions, range(len(directions))))
+    change_j = [-1,  0,  1, # x or columns
+                -1,      1,
+                -1,  0,  1]
+    change_i = [-1, -1, -1, # y or rows
+                0,      0,
+                1,  1,  1]
+    border = []
+    chain = []
+    curr_point = start_point(skel_img)
     
     
             
