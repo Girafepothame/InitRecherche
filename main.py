@@ -19,15 +19,16 @@ def main():
     for i in range(ord('a'), ord('z')+1):
         pathtab[chr(i)] = char_paths(PATH+"/"+chr(i))
         
-    char_tab = img_tab(pathtab, 'm')
+    char_tab = img_tab(pathtab, 'c')
     
     min_tab = []
     for char in char_tab:
         inv = invert_image(char)
         skel = skeletonize(inv, method = "lee")
-        min = draw_minutia(minutia_extraction(skel), skel)
-        min_tab.append(min)
-        print(start_point(skel))
+        min = smoothing(minutia_extraction(skel), 15)
+        min_tab.append(draw_minutia(min, skel))
+        cache = []
+        print(freeman_encode(skel, cache))
     
     
     affiche_tab(min_tab)

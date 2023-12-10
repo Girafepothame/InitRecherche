@@ -30,24 +30,70 @@ def char_paths(path = "dataset/dataset_caracters"):
 def img_tab(tab, car):
     return [load_image(image) for image in tab[car]]
 
-def start_point(skel_img):
-    smooth_minutia = smoothing(minutia_extraction(skel_img), 15)
-    return smooth_minutia[0]
 
-def freeman_encode(skel_img):
-    directions = [0, 1, 2,
-                  7,    3,
-                  6, 5, 4]
-    dir2idx = dict(zip(directions, range(len(directions))))
-    change_j = [-1,  0,  1, # x or columns
-                -1,      1,
-                -1,  0,  1]
-    change_i = [-1, -1, -1, # y or rows
-                0,      0,
-                1,  1,  1]
-    border = []
-    chain = []
-    curr_point = start_point(skel_img)
+def get_neighbor(img, p, cache):
+    cache.append(p)
+    i = p[0]
+    j = p[1]
+    
+    # neighbor_list = [((i, j+1), img[i][j+1]),
+    #                 ((i-1, j+1), img[i-1][j+1]),
+    #                 ((i-1, j), img[i-1][j]),
+    #                 ((i-1, j-1), img[i-1][j-1]),
+    #                 ((i, j-1), img[i][j-1]),
+    #                 ((i+1, j-1), img[i+1][j-1]),
+    #                 ((i+1, j), img[i+1][j]),
+    #                 ((i+1, j+1), img[i+1][j+1])]
+    
+    neighbor_list = [((i-1, j-1), img[i-1][j-1]),
+                    ((i-1, j), img[i-1][j]),
+                    ((i-1, j+1), img[i-1][j+1]),
+                    ((i, j+1), img[i][j+1]),
+                    ((i+1, j+1), img[i+1][j+1]),
+                    ((i+1, j), img[i+1][j]),
+                    ((i+1, j-1), img[i+1][j-1]),
+                    ((i, j-1), img[i][j-1])]
+    
+    for index, n in enumerate(neighbor_list):
+        pos = n[0]
+        if cache == []:
+            pass
+        elif pos in cache:
+            neighbor_list[index] = (neighbor_list[index][0], 0)
+            
+    return neighbor_list, cache
+
+def freeman_travel(neighbor_p):
+    # print(neighbor_p)
+    for index, pixel in enumerate(neighbor_p):
+        # print(pixel)
+        if pixel[-1] == 255:
+            # print(pixel[0])
+            return (pixel[0], index)
+    return None
+    
+def freeman_encode(skel_img, cache):
+    code = []
+    directions =  [0,  1,  2,
+                   7,      3,
+                   6,  5,  4]
+    dir2idx = dict(zip(range(len(directions)), directions))
+    # print(dir2idx)
+    smooth_minutia = smoothing(minutia_extraction(skel_img), 15)
+    curr_p = smooth_minutia[0]
+    
+    phoque = True
+    while phoque:
+        # print(curr_p)
+        neighbor, cache = get_neighbor(skel_img, curr_p, cache)
+        # print(neighbor)
+        p = freeman_travel(neighbor)
+        if p is None:
+            phoque = False
+        else:
+            curr_p = p[0]
+            code.append(dir2idx[p[-1]])
+    return code
     
     
             
