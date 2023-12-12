@@ -19,7 +19,7 @@ def main():
     for i in range(ord('a'), ord('z')+1):
         pathtab[chr(i)] = char_paths(PATH+"/"+chr(i))
         
-    char_tab = img_tab(pathtab, 'c')
+    char_tab = img_tab(pathtab, 'a')
     
     min_tab = []
     for char in char_tab:
