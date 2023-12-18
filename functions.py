@@ -30,30 +30,24 @@ def char_paths(path = "dataset/dataset_caracters"):
 def img_tab(tab, car):
     return [load_image(image) for image in tab[car]]
 
+def getCase(img, i, j):
+    return None if i < 0 or j < 0 or i >= img.shape[0] or j >= img.shape[1] else img[i][j]
 
 def get_neighbor(img, p, cache):
     cache.append(p)
     i = p[0]
     j = p[1]
     
-    # neighbor_list = [((i, j+1), img[i][j+1]),
-    #                 ((i-1, j+1), img[i-1][j+1]),
-    #                 ((i-1, j), img[i-1][j]),
-    #                 ((i-1, j-1), img[i-1][j-1]),
-    #                 ((i, j-1), img[i][j-1]),
-    #                 ((i+1, j-1), img[i+1][j-1]),
-    #                 ((i+1, j), img[i+1][j]),
-    #                 ((i+1, j+1), img[i+1][j+1])]
-    
-    neighbor_list = [((i-1, j-1), img[i-1][j-1]),
-                    ((i-1, j), img[i-1][j]),
-                    ((i-1, j+1), img[i-1][j+1]),
-                    ((i, j+1), img[i][j+1]),
-                    ((i+1, j+1), img[i+1][j+1]),
-                    ((i+1, j), img[i+1][j]),
-                    ((i+1, j-1), img[i+1][j-1]),
-                    ((i, j-1), img[i][j-1])]
-    
+    neighbor_list = [((i-1, j-1), getCase(img, i-1, j-1)),
+                    ((i-1, j), getCase(img, i-1, j)),
+                    ((i-1, j+1), getCase(img, i-1, j+1)),
+                    ((i, j+1), getCase(img, i, j+1)),
+                    ((i+1, j+1), getCase(img, i+1, j+1)),
+                    ((i+1, j), getCase(img, i+1, j)),
+                    ((i+1, j-1), getCase(img, i+1, j-1)),
+                    ((i, j-1), getCase(img, i, j-1))]
+        
+        
     for index, n in enumerate(neighbor_list):
         pos = n[0]
         if cache == []:
@@ -79,20 +73,26 @@ def freeman_encode(skel_img, cache):
                    6,  5,  4]
     dir2idx = dict(zip(range(len(directions)), directions))
     # print(dir2idx)
-    smooth_minutia = smoothing(minutia_extraction(skel_img), 15)
-    curr_p = smooth_minutia[0]
     
-    phoque = True
-    while phoque:
-        # print(curr_p)
-        neighbor, cache = get_neighbor(skel_img, curr_p, cache)
-        # print(neighbor)
-        p = freeman_travel(neighbor)
-        if p is None:
-            phoque = False
-        else:
-            curr_p = p[0]
-            code.append(dir2idx[p[-1]])
+    smooth_minutia = smoothing(minutia_extraction(skel_img), 15)
+    smooth_minutia.sort(key=lambda x: x[-1])
+    print("smooth_minutia : " + str(smooth_minutia))
+    
+    for point in smooth_minutia:
+        curr_p = point
+        print("curr_p : " + str(curr_p))
+        code.append(42)
+        phoque = True
+        while phoque:
+            # print(curr_p)
+            neighbor, cache = get_neighbor(skel_img, curr_p, cache)
+            # print(neighbor)
+            p = freeman_travel(neighbor)
+            if p is None:
+                phoque = False
+            else:
+                curr_p = p[0]
+                code.append(dir2idx[p[-1]])
     return code
     
     
@@ -133,12 +133,12 @@ def minutia_extraction(im_skeleton):
     return minutia
 
 # Coloring minutia pixels in red for visualization
-def draw_minutia(minutia, im_skeleton):
+def draw_minutia(minutia, im_skeleton, color):
     im_skeleton_color = gray2rgb(im_skeleton)
     # Looping through the minutias collected
     for m in minutia:
         # Colorize the pixel in red
-        im_skeleton_color[m[0]][m[1]] = (255, 0, 0)
+        im_skeleton_color[m[0]][m[1]] = color
     return im_skeleton_color
 
 # Distance between two points of an image
@@ -181,3 +181,9 @@ def smoothing(minutia, threshold):
         smooth_minutia.remove(m)
 
     return smooth_minutia + smooth_ending_points
+
+def circling_img(img):
+    # Draw a white border around the edges of the image
+    res = np.array([[255]*(img.shape[1]+2)]*(img.shape[0]+2))
+    res[1:img.shape[0]+1, 1:img.shape[1]+1] = img
+    return res
