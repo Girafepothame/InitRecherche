@@ -19,18 +19,21 @@ def main():
     for i in range(ord('a'), ord('z')+1):
         pathtab[chr(i)] = char_paths(PATH+"/"+chr(i))
         
-    char_tab = img_tab(pathtab, 'z')
+    char_tab = img_tab(pathtab, 'w')
     car_tab = []
     test_tab = []
     
     min_tab = []
     for char in char_tab:
-        car = circling_img(char)
-        car_tab.append(car)
-        inv = invert_image(car)
+        inv = invert_image(char)
         skel = skeletonize(inv, method = "lee")
-        min = smoothing(minutia_extraction(skel), 15)
+        
+        # Affichage / Debug
+        car_tab.append(draw_minutia(minutia_extraction(skel), skel, (255, 0, 0)))
+        print("smooted : " + str(smoothing(skel, minutia_extraction(skel), 15)))
+        min = smoothing(skel, minutia_extraction(skel), 15)
         min_tab.append(draw_minutia(min, skel, (255, 0, 0)))
+        
         cache = []
         print(freeman_encode(skel, cache))
         test = draw_minutia(cache, skel, (0, 255, 0))

@@ -17,6 +17,8 @@ from skimage.filters import threshold_isodata, threshold_li, threshold_mean, thr
 
 def load_image(file):
     res = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
+    ret, res = cv2.threshold(res, 127, 255, cv2.THRESH_BINARY)
+    res = circling_img(res)
     return res
 
 def invert_image(img):
@@ -30,23 +32,64 @@ def char_paths(path = "dataset/dataset_caracters"):
 def img_tab(tab, car):
     return [load_image(image) for image in tab[car]]
 
-def getCase(img, i, j):
+def get_case(img, i, j):
     return None if i < 0 or j < 0 or i >= img.shape[0] or j >= img.shape[1] else img[i][j]
+
+
+
+def get_next(img, p, cache):
+    
+    x = p[0]
+    y = p[1]
+    
+    neighbors = [(x + 1, y), (x, y + 1), (x - 1, y), (x, y - 1), (x - 1, y - 1), (x + 1, y - 1), (x + 1, y + 1), (x - 1, y + 1)]
+    
+    for cup in neighbors:
+        pt = (cup[0], cup[1])
+
+        if pt is None:
+            continue
+        if img[pt[0]][pt[1]] == 255 and not pt in cache:
+            return pt
+
+    return None
+
+def pt_distance(img, minutia, pt, cache):
+    # print(minutia)
+    point = get_next(img, pt, cache)
+    
+    if point is None: 
+        return 0
+
+    # print(point)
+    cache.append(point)
+
+    # Check if next point is connective (between 2 minutias)
+    for minu in minutia:
+        # print(minu, point)
+        if minu[:2] == point:
+            return 1
+        
+    return pt_distance(img, minutia, point, cache) + 1
+            
+
+
+
+
 
 def get_neighbor(img, p, cache):
     cache.append(p)
     i = p[0]
     j = p[1]
     
-    neighbor_list = [((i-1, j-1), getCase(img, i-1, j-1)),
-                    ((i-1, j), getCase(img, i-1, j)),
-                    ((i-1, j+1), getCase(img, i-1, j+1)),
-                    ((i, j+1), getCase(img, i, j+1)),
-                    ((i+1, j+1), getCase(img, i+1, j+1)),
-                    ((i+1, j), getCase(img, i+1, j)),
-                    ((i+1, j-1), getCase(img, i+1, j-1)),
-                    ((i, j-1), getCase(img, i, j-1))]
-        
+    neighbor_list = [((i-1, j-1), get_case(img, i-1, j-1)),
+                    ((i-1, j), get_case(img, i-1, j)),
+                    ((i-1, j+1), get_case(img, i-1, j+1)),
+                    ((i, j+1), get_case(img, i, j+1)),
+                    ((i+1, j+1), get_case(img, i+1, j+1)),
+                    ((i+1, j), get_case(img, i+1, j)),
+                    ((i+1, j-1), get_case(img, i+1, j-1)),
+                    ((i, j-1), get_case(img, i, j-1))]
         
     for index, n in enumerate(neighbor_list):
         pos = n[0]
@@ -57,6 +100,7 @@ def get_neighbor(img, p, cache):
             
     return neighbor_list, cache
 
+
 def freeman_travel(neighbor_p):
     # print(neighbor_p)
     for index, pixel in enumerate(neighbor_p):
@@ -65,29 +109,48 @@ def freeman_travel(neighbor_p):
             # print(pixel[0])
             return (pixel[0], index)
     return None
+
+
+# In case there is no "starting point"
+def first_position_value(arr, value, size):
+  indexes = np.where(arr == value)[0]
+  if not np.any(indexes):
+      exit
+
+  first = indexes[0]
+
+  x = first // size[1]
+  y = first % size[1]
+  
+  return (x, y, 1)
     
+
 def freeman_encode(skel_img, cache):
     code = []
     directions =  [0,  1,  2,
                    7,      3,
                    6,  5,  4]
     dir2idx = dict(zip(range(len(directions)), directions))
-    # print(dir2idx)
     
-    smooth_minutia = smoothing(minutia_extraction(skel_img), 15)
+    smooth_minutia = smoothing(skel_img, minutia_extraction(skel_img), 15)
     smooth_minutia.sort(key=lambda x: x[-1])
-    print("smooth_minutia : " + str(smooth_minutia))
+    print("\nsmooth_minutia : " + str(smooth_minutia))
+    
+    # Begin from a random point of the letter if there is no minutia (letter 'o' for example)
+    if not smooth_minutia:
+        flat = skel_img.flatten()
+        first = first_position_value(flat, 255, skel_img.shape)
+        smooth_minutia.append(first)
     
     for point in smooth_minutia:
         curr_p = point
-        print("curr_p : " + str(curr_p))
         code.append(42)
+        
         phoque = True
         while phoque:
-            # print(curr_p)
             neighbor, cache = get_neighbor(skel_img, curr_p, cache)
-            # print(neighbor)
             p = freeman_travel(neighbor)
+            
             if p is None:
                 phoque = False
             else:
@@ -105,11 +168,13 @@ def minutia_extraction(im_skeleton):
     for i in range(1, h-1):
         for j in range(1, w-1):
             # Browsing through the pixels of the skeleton
-            if im_skeleton[i][j] !=0:
+            if im_skeleton[i][j] != 0:
                 # Get every neighbor
-                P = [im_skeleton[i][j+1], im_skeleton[i-1][j+1], im_skeleton[i-1][j], im_skeleton[i-1][j-1], im_skeleton[i][j-1], im_skeleton[i+1][j-1], im_skeleton[i+1][j], im_skeleton[i+1][j+1], im_skeleton[i][j+1]]
+                P = [im_skeleton[i][j+1], im_skeleton[i-1][j+1], im_skeleton[i-1][j],
+                     im_skeleton[i-1][j-1], im_skeleton[i][j-1], im_skeleton[i+1][j-1],
+                     im_skeleton[i+1][j], im_skeleton[i+1][j+1], im_skeleton[i][j+1]]
                 CN = 0
-                # Pitié ALED
+                
                 for k in range(8):
                     CN += abs(P[k]/255 - P[k+1]/255)
                 CN = CN/2
@@ -129,8 +194,10 @@ def minutia_extraction(im_skeleton):
                     minutia.append((i,j,3))
                 elif CN == 4:
                     minutia.append((i,j,4))
-  
+
     return minutia
+
+
 
 # Coloring minutia pixels in red for visualization
 def draw_minutia(minutia, im_skeleton, color):
@@ -141,19 +208,23 @@ def draw_minutia(minutia, im_skeleton, color):
         im_skeleton_color[m[0]][m[1]] = color
     return im_skeleton_color
 
+
+
 # Distance between two points of an image
-def euclidean_distance_minutia(m1, m2):
-    return math.sqrt((m1[0] - m2[0])*(m1[0] - m2[0]) + (m1[1] - m2[1])*(m1[1] - m2[1]))
+# LA FRAUDA !
+# def euclidean_distance_minutia(m1, m2):
+#     return math.sqrt((m1[0] - m2[0])*(m1[0] - m2[0]) + (m1[1] - m2[1])*(m1[1] - m2[1]))
+
+
 
 # delete serif (small parts of character) which size is inferior to the threshold - return the table of the minutia where the code will be generated between
-def smoothing(minutia, threshold):
+def smoothing(skel_img, minutia, threshold):
     smooth_minutia = []
     ending_points = []
-    smooth_ending_points = []
-    pb = []
 
     # Add all ending points to the right array
     for m in minutia:
+        # every non-ending point
         if m[2] != 1:
             smooth_minutia.append(m)
         else:
@@ -162,28 +233,20 @@ def smoothing(minutia, threshold):
     # Case where only ending points
     if smooth_minutia == []:
         return minutia
-    # Else
     else:
         for m in ending_points:
-            i = 0
-            # Test the length of the *serif* we are analysing (between the current ending point and the next non-ending minutia)
-            while (i < len(smooth_minutia)) and (euclidean_distance_minutia(m, smooth_minutia[i]) > threshold):
-                i += 1
-            if (i == len(smooth_minutia)):
-                smooth_ending_points.append(m)
-            else:
-                pb.append(smooth_minutia[i])
-                
-    # removing duplicates
-    pb = list(set(pb))
+            # get distance between the ending points and the first other point encountered (across the shape)
+            dist = pt_distance(skel_img, minutia, (m[0], m[1]), [(m[0], m[1])])
+            
+            if dist < threshold:
+                minutia.remove(m)
 
-    for m in pb:
-        smooth_minutia.remove(m)
+    return minutia
 
-    return smooth_minutia + smooth_ending_points
 
+
+# Draw a white border around the edges of the image
 def circling_img(img):
-    # Draw a white border around the edges of the image
     res = np.array([[255]*(img.shape[1]+2)]*(img.shape[0]+2))
     res[1:img.shape[0]+1, 1:img.shape[1]+1] = img
     return res
