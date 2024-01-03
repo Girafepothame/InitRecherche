@@ -36,19 +36,21 @@ def get_case(img, i, j):
     return None if i < 0 or j < 0 or i >= img.shape[0] or j >= img.shape[1] else img[i][j]
 
 
-
+# Returnsthe next white pixel neighbouring p, starting with direct neighbours
 def get_next(img, p, cache):
     
     x = p[0]
     y = p[1]
     
+    # checking neighbours starting with nearest (cross pattern) then in the corners
     neighbors = [(x + 1, y), (x, y + 1), (x - 1, y), (x, y - 1), (x - 1, y - 1), (x + 1, y - 1), (x + 1, y + 1), (x - 1, y + 1)]
     
-    for cup in neighbors:
-        pt = (cup[0], cup[1])
+    for coord in neighbors:
+        pt = (coord[0], coord[1])
 
         if pt is None:
             continue
+        # White pixel and not already checked
         if img[pt[0]][pt[1]] == 255 and not pt in cache:
             return pt
 
@@ -75,54 +77,61 @@ def pt_distance(img, minutia, pt, cache):
 
 
 
-
-
-def get_neighbor(img, p, cache):
-    cache.append(p)
-    i = p[0]
-    j = p[1]
+# def get_neighbor(img, p, cache):
+#     cache.append(p)
+#     i = p[0]
+#     j = p[1]
     
-    neighbor_list = [((i-1, j-1), get_case(img, i-1, j-1)),
-                    ((i-1, j), get_case(img, i-1, j)),
-                    ((i-1, j+1), get_case(img, i-1, j+1)),
-                    ((i, j+1), get_case(img, i, j+1)),
-                    ((i+1, j+1), get_case(img, i+1, j+1)),
-                    ((i+1, j), get_case(img, i+1, j)),
-                    ((i+1, j-1), get_case(img, i+1, j-1)),
-                    ((i, j-1), get_case(img, i, j-1))]
+#     neighbor_list = [((i-1, j-1), get_case(img, i-1, j-1)),
+#                     ((i-1, j), get_case(img, i-1, j)),
+#                     ((i-1, j+1), get_case(img, i-1, j+1)),
+#                     ((i, j+1), get_case(img, i, j+1)),
+#                     ((i+1, j+1), get_case(img, i+1, j+1)),
+#                     ((i+1, j), get_case(img, i+1, j)),
+#                     ((i+1, j-1), get_case(img, i+1, j-1)),
+#                     ((i, j-1), get_case(img, i, j-1))]
         
-    for index, n in enumerate(neighbor_list):
-        pos = n[0]
-        if cache == []:
-            pass
-        elif pos in cache:
-            neighbor_list[index] = (neighbor_list[index][0], 0)
+#     for index, n in enumerate(neighbor_list):
+#         pos = n[0]
+#         if cache == []:
+#             pass
+#         elif pos in cache:
+#             neighbor_list[index] = (neighbor_list[index][0], 0)
             
-    return neighbor_list, cache
+#     return neighbor_list, cache
 
 
-def freeman_travel(neighbor_p):
-    # print(neighbor_p)
-    for index, pixel in enumerate(neighbor_p):
-        # print(pixel)
-        if pixel[-1] == 255:
-            # print(pixel[0])
-            return (pixel[0], index)
-    return None
+def freeman_travel(img, minutia, pt, cache):
+    # print(minutia)
+    point = get_next(img, pt, cache)
+    
+    if point is None: 
+        return 0
+
+    print(point)
+    cache.append(point)
+
+    # Check if next point is connective (between 2 minutias)
+    for minu in minutia:
+        # print(minu, point)
+        if minu[:2] == point:
+            return 1
+        
+    return freeman_travel(img, minutia, point, cache) + 1
 
 
 # In case there is no "starting point"
 def first_position_value(arr, value, size):
-  indexes = np.where(arr == value)[0]
-  if not np.any(indexes):
-      exit
+    indexes = np.where(arr == value)[0]
+    if not np.any(indexes):
+        exit
 
-  first = indexes[0]
+    first = indexes[0]
 
-  x = first // size[1]
-  y = first % size[1]
-  
-  return (x, y, 1)
+    x = first // size[1]
+    y = first % size[1]
+    
+    return (x, y, 1)
     
 
 def freeman_encode(skel_img, cache):
@@ -130,6 +139,8 @@ def freeman_encode(skel_img, cache):
     directions =  [0,  1,  2,
                    7,      3,
                    6,  5,  4]
+    
+    # creating a dictionary with the key being the index of the direction
     dir2idx = dict(zip(range(len(directions)), directions))
     
     smooth_minutia = smoothing(skel_img, minutia_extraction(skel_img), 15)
@@ -146,16 +157,20 @@ def freeman_encode(skel_img, cache):
         curr_p = point
         code.append(42)
         
-        phoque = True
-        while phoque:
-            neighbor, cache = get_neighbor(skel_img, curr_p, cache)
-            p = freeman_travel(neighbor)
+        print("\n\nHERE\n")
+        print(str(curr_p) + " : " + str(freeman_travel(skel_img, smooth_minutia, curr_p, [(point[0], point[1])])) + "[")
+        print("]")
+        
+        # phoque = True
+        # while phoque:
+        #     neighbor, cache = get_neighbor(skel_img, curr_p, cache)
+        #     p = freeman_travel(neighbor)
             
-            if p is None:
-                phoque = False
-            else:
-                curr_p = p[0]
-                code.append(dir2idx[p[-1]])
+        #     if p is None:
+        #         phoque = False
+        #     else:
+        #         curr_p = p[0]
+        #         code.append(dir2idx[p[-1]])
     return code
     
     
@@ -236,6 +251,7 @@ def smoothing(skel_img, minutia, threshold):
     else:
         for m in ending_points:
             # get distance between the ending points and the first other point encountered (across the shape)
+            # the cache is set with the current ending point to prevent going back
             dist = pt_distance(skel_img, minutia, (m[0], m[1]), [(m[0], m[1])])
             
             if dist < threshold:
