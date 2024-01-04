@@ -77,30 +77,6 @@ def pt_distance(img, minutia, pt, cache):
 
 
 
-# def get_neighbor(img, p, cache):
-#     cache.append(p)
-#     i = p[0]
-#     j = p[1]
-    
-#     neighbor_list = [((i-1, j-1), get_case(img, i-1, j-1)),
-#                     ((i-1, j), get_case(img, i-1, j)),
-#                     ((i-1, j+1), get_case(img, i-1, j+1)),
-#                     ((i, j+1), get_case(img, i, j+1)),
-#                     ((i+1, j+1), get_case(img, i+1, j+1)),
-#                     ((i+1, j), get_case(img, i+1, j)),
-#                     ((i+1, j-1), get_case(img, i+1, j-1)),
-#                     ((i, j-1), get_case(img, i, j-1))]
-        
-#     for index, n in enumerate(neighbor_list):
-#         pos = n[0]
-#         if cache == []:
-#             pass
-#         elif pos in cache:
-#             neighbor_list[index] = (neighbor_list[index][0], 0)
-            
-#     return neighbor_list, cache
-
-
 def freeman_travel(img, minutia, pt, cache):
     # print(minutia)
     point = get_next(img, pt, cache)
@@ -143,7 +119,8 @@ def freeman_encode(skel_img, cache):
     # creating a dictionary with the key being the index of the direction
     dir2idx = dict(zip(range(len(directions)), directions))
     
-    smooth_minutia = smoothing(skel_img, minutia_extraction(skel_img), 15)
+    cache.append(list(smoothing(skel_img, minutia_extraction(skel_img), 15)[1]))
+    smooth_minutia = smoothing(skel_img, minutia_extraction(skel_img), 15)[1]
     smooth_minutia.sort(key=lambda x: x[-1])
     print("\nsmooth_minutia : " + str(smooth_minutia))
     
@@ -156,21 +133,12 @@ def freeman_encode(skel_img, cache):
     for point in smooth_minutia:
         curr_p = point
         code.append(42)
+        cache.append((point[0], point[1]))
         
-        print("\n\nHERE\n")
-        print(str(curr_p) + " : " + str(freeman_travel(skel_img, smooth_minutia, curr_p, [(point[0], point[1])])) + "[")
-        print("]")
+        print(curr_p)
+        print(freeman_travel(skel_img, smooth_minutia, curr_p, cache))
+        print("cache : " + str(cache) + "\n")
         
-        # phoque = True
-        # while phoque:
-        #     neighbor, cache = get_neighbor(skel_img, curr_p, cache)
-        #     p = freeman_travel(neighbor)
-            
-        #     if p is None:
-        #         phoque = False
-        #     else:
-        #         curr_p = p[0]
-        #         code.append(dir2idx[p[-1]])
     return code
     
     
@@ -236,6 +204,7 @@ def draw_minutia(minutia, im_skeleton, color):
 def smoothing(skel_img, minutia, threshold):
     smooth_minutia = []
     ending_points = []
+    remove = []
 
     # Add all ending points to the right array
     for m in minutia:
@@ -256,8 +225,9 @@ def smoothing(skel_img, minutia, threshold):
             
             if dist < threshold:
                 minutia.remove(m)
+                remove.append(m)
 
-    return minutia
+    return remove, minutia
 
 
 

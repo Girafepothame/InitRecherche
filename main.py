@@ -30,15 +30,16 @@ def main():
         
         # Affichage / Debug
         car_tab.append(draw_minutia(minutia_extraction(skel), skel, (255, 0, 0)))
-        min = smoothing(skel, minutia_extraction(skel), 15)
+        ret, min = smoothing(skel, minutia_extraction(skel), 15)
         min_tab.append(draw_minutia(min, skel, (255, 0, 0)))
         
         # Freeman encoding
         cache = []
         print(freeman_encode(skel, cache))
-        test = draw_minutia(cache, skel, (0, 255, 0))
-        test_tab.append(test)
+        # test = draw_minutia(cache, skel, (0, 255, 0))
+        # test_tab.append(test)
         # Post treating the freeman code
+        break
     
     affiche_tab(car_tab)
     affiche_tab(min_tab)
