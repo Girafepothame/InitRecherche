@@ -17,6 +17,15 @@ from skimage.filters import threshold_isodata, threshold_li, threshold_mean, thr
 PATH = "dataset/dataset_caracters/04_2PS600_police12"
 
 def resize(img, scale):
+    """resize an image
+
+    Args:
+        img (np array/image): the image you want to resize
+        scale (integer): the scale of the image you want
+
+    Returns:
+        np array/image: the image resized
+    """
     width = int(img.shape[1] * scale)
     height = int(img.shape[0] * scale)
     dim = (width, height)
@@ -26,6 +35,15 @@ def resize(img, scale):
     return img
 
 def pre_treatment(img, path):
+    """ Edit an image to get a better sample to treat afterward
+
+    Args:
+        img (np array/image): the image you want to change
+        path (string): Where the image is collected, in this case it's needed to know if we have to scale the image
+
+    Returns:
+        np array/mage: the image edited
+    """
     if path == "dataset/dataset_caracters/02_PS300_police12":
         img = resize(img, 2)
     
@@ -45,20 +63,38 @@ def pre_treatment(img, path):
     return res
 
 def load_image(file):
+    """ read an image from a file path
+
+    Args:
+        file (string): the path were we will get the file
+
+    Returns:
+        np array/image: an image
+    """
     img = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
     img = pre_treatment(img, PATH)
     
     img = invert_image(img)
     return img
 
+# invert a binarized image
 def invert_image(img):
     return 255-img  
     
-# Return all files from "path" directory (default all png files)
+
 def char_paths(path = "dataset/dataset_caracters"):
+    """Return all files from "path" directory (default all png files)
+
+    Args:
+        path (str, optional): the path were to find the images. Defaults to "dataset/dataset_caracters".
+
+    Returns:
+        list: list of paths(str)
+    """
     return glob.glob(path + "/**/*.png", recursive=True)
 
 
+# return an array of images
 def img_tab(tab, car):
     return [load_image(image) for image in tab[car]]
 
