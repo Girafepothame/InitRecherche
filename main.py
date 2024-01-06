@@ -2,8 +2,6 @@ from functions import *
 
 
 
-PATH = "dataset/dataset_caracters/03_PS600_police12"
-
 def affiche_tab(tab):
     titles = [i+1 for i in range(10)]
     for i in range(len(tab)):
@@ -19,15 +17,14 @@ def main():
     for i in range(ord('a'), ord('z')+1):
         pathtab[chr(i)] = char_paths(PATH+"/"+chr(i))
         
-    char_tab = img_tab(pathtab, 'x')
+    char_tab = img_tab(pathtab, 'a')
     car_tab = []
     # test_tab = []
     code_tab = []
     
     min_tab = []
     for char in char_tab:
-        inv = invert_image(char)
-        skel = skeletonize(inv, method = "lee")
+        skel = skeletonize(char, method = "lee")
         
         ## Affichage / Debug
         car_tab.append(draw_minutia(minutia_extraction(skel), skel, (255, 0, 0)))

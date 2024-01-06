@@ -14,12 +14,42 @@ from skimage.transform import resize, rotate
 from skimage.morphology import erosion, dilation, opening, closing, skeletonize, square
 from skimage.filters import threshold_isodata, threshold_li, threshold_mean, threshold_minimum, threshold_otsu, threshold_triangle, threshold_yen
 
+PATH = "dataset/dataset_caracters/04_2PS600_police12"
+
+def resize(img, scale):
+    width = int(img.shape[1] * scale)
+    height = int(img.shape[0] * scale)
+    dim = (width, height)
+    
+    # resize image
+    img = cv2.resize(img, dim, interpolation = cv2.INTER_AREA)
+    return img
+
+def pre_treatment(img, path):
+    if path == "dataset/dataset_caracters/02_PS300_police12":
+        img = resize(img, 2)
+    
+    img = cv2.blur(img,(5,5))
+    
+    ret, img = cv2.threshold(img, 200, 255, cv2.THRESH_BINARY)
+    
+        
+    img = cv2.morphologyEx(img, cv2.MORPH_OPEN, np.ones((3, 3), dtype=np.uint8))
+        
+    
+    # blur = cv2.blur(img,(3,3))
+    # ret, img = cv2.threshold(blur, 127, 255, cv2.THRESH_BINARY)
+    
+    res = circling_img(img)
+    
+    return res
 
 def load_image(file):
-    res = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
-    ret, res = cv2.threshold(res, 127, 255, cv2.THRESH_BINARY)
-    res = circling_img(res)
-    return res
+    img = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
+    img = pre_treatment(img, PATH)
+    
+    img = invert_image(img)
+    return img
 
 def invert_image(img):
     return 255-img  
@@ -53,22 +83,6 @@ def get_next(img, p, cache):
             return pt
 
     return None
-
-# def pt_distance(img, minutia, pt, cache):
-#     point = get_next(img, pt, cache)
-    
-#     if point is None: 
-#         return 0
-
-#     cache.append(point)
-
-#     # Check if next point is connective (between 2 minutias)
-#     for minu in minutia:
-#         if minu[:2] == point:
-#             return 1
-        
-#     return pt_distance(img, minutia, point, cache) + 1
-            
 
 
 
@@ -137,17 +151,19 @@ def encode(code):
         # Retrieving direction vector in the table dir
         x = curr[1] - prev[1]
         y = curr[0] - prev[0]
-        # print((x, y))
         
         # If we change starting point (next minutia)
         if abs(x) > 1 or abs(y) > 1:
             res += ">"
             prev_index = -1
+            
         else:
+            # calculating index from a 2-dim array to a 1-dim array
             index = (y + 1)*3 + x + 1
-            # print(dir[index])
-            if prev_index != index:
-                res += str(dir[index])
+            
+            # if prev_index != index:
+            res += str(dir[index])
+                
             prev_index = index
                     
     return res
@@ -169,7 +185,7 @@ def freeman_encode(skel_img, cache):
     code = []
     
     minutia = minutia_extraction(skel_img)
-    remove, smooth_minutia = smoothing(skel_img, minutia, 12)
+    remove, smooth_minutia = smoothing(skel_img, minutia, 15)
     cache += remove
     
     anchor = (0, 0)  # Top-Left Corner
@@ -178,9 +194,6 @@ def freeman_encode(skel_img, cache):
     dist = list(map(lambda x: euclidean_distance_minutia(anchor, x[:2]), smooth_minutia))
     sorted_dist = sorted(dist)
     smooth_minutia = [x[0] for x in sorted(list(zip(smooth_minutia, dist)), key=lambda tupl: tupl[-1])]
-    # (x, y, t)
-    for i in range(len(smooth_minutia)):   
-        print(i, (sorted_dist[i], smooth_minutia[i]))
     
     
     # Begin from a random point of the letter if there is no minutia (letter 'o' for example)
