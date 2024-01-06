@@ -32,8 +32,6 @@ def char_paths(path = "dataset/dataset_caracters"):
 def img_tab(tab, car):
     return [load_image(image) for image in tab[car]]
 
-def get_case(img, i, j):
-    return None if i < 0 or j < 0 or i >= img.shape[0] or j >= img.shape[1] else img[i][j]
 
 
 # Returnsthe next white pixel neighbouring p, starting with direct neighbours
@@ -56,23 +54,20 @@ def get_next(img, p, cache):
 
     return None
 
-def pt_distance(img, minutia, pt, cache):
-    # print(minutia)
-    point = get_next(img, pt, cache)
+# def pt_distance(img, minutia, pt, cache):
+#     point = get_next(img, pt, cache)
     
-    if point is None: 
-        return 0
+#     if point is None: 
+#         return 0
 
-    # print(point)
-    cache.append(point)
+#     cache.append(point)
 
-    # Check if next point is connective (between 2 minutias)
-    for minu in minutia:
-        # print(minu, point)
-        if minu[:2] == point:
-            return 1
+#     # Check if next point is connective (between 2 minutias)
+#     for minu in minutia:
+#         if minu[:2] == point:
+#             return 1
         
-    return pt_distance(img, minutia, point, cache) + 1
+#     return pt_distance(img, minutia, point, cache) + 1
             
 
 
@@ -80,20 +75,22 @@ def pt_distance(img, minutia, pt, cache):
 def freeman_travel(img, minutia, pt, cache):
     # print(minutia)
     point = get_next(img, pt, cache)
+    # print(point)
     
-    if point is None: 
-        return 0
+    if point is None:
+        return []
 
-    print(point)
     cache.append(point)
 
     # Check if next point is connective (between 2 minutias)
     for minu in minutia:
         # print(minu, point)
         if minu[:2] == point:
-            return 1
+            return [point]
         
-    return freeman_travel(img, minutia, point, cache) + 1
+    elem = freeman_travel(img, minutia, point, cache)
+    
+    return (elem + [point])
 
 
 # In case there is no "starting point"
@@ -108,21 +105,83 @@ def first_position_value(arr, value, size):
     y = first % size[1]
     
     return (x, y, 1)
+
+
+def encode(code):
     
+    """ Encoding an array into Freeman code
+
+    Args:
+        code (array or list): An array of tuples that are pixels coordinates
+
+    Returns:
+        array or list: An array of "direction" integers -> Freeman encoding
+    """
+    
+    res = ""
+    dir = [0, 1, 2,
+           7,-1, 3,
+           6, 5, 4]
+    
+    prev_index = -1
+    
+    # We start with a minutia -> encode 42
+    res += ">"
+    # print(code)
+    
+    # Start loop at the second item
+    for i in range(1, len(code)):
+        prev = code[i-1]
+        curr = code[i]
+        
+        # Retrieving direction vector in the table dir
+        x = curr[1] - prev[1]
+        y = curr[0] - prev[0]
+        # print((x, y))
+        
+        # If we change starting point (next minutia)
+        if abs(x) > 1 or abs(y) > 1:
+            res += ">"
+            prev_index = -1
+        else:
+            index = (y + 1)*3 + x + 1
+            # print(dir[index])
+            if prev_index != index:
+                res += str(dir[index])
+            prev_index = index
+                    
+    return res
+
+
 
 def freeman_encode(skel_img, cache):
+    
+    """_summary_
+
+    Args:
+        skel_img (_type_): _description_
+        cache (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    
     code = []
-    directions =  [0,  1,  2,
-                   7,      3,
-                   6,  5,  4]
     
-    # creating a dictionary with the key being the index of the direction
-    dir2idx = dict(zip(range(len(directions)), directions))
+    minutia = minutia_extraction(skel_img)
+    remove, smooth_minutia = smoothing(skel_img, minutia, 12)
+    cache += remove
     
-    cache.append(list(smoothing(skel_img, minutia_extraction(skel_img), 15)[1]))
-    smooth_minutia = smoothing(skel_img, minutia_extraction(skel_img), 15)[1]
-    smooth_minutia.sort(key=lambda x: x[-1])
-    print("\nsmooth_minutia : " + str(smooth_minutia))
+    anchor = (0, 0)  # Top-Left Corner
+    
+    # Create a list of distance between the anchor point and all the minutias
+    dist = list(map(lambda x: euclidean_distance_minutia(anchor, x[:2]), smooth_minutia))
+    sorted_dist = sorted(dist)
+    smooth_minutia = [x[0] for x in sorted(list(zip(smooth_minutia, dist)), key=lambda tupl: tupl[-1])]
+    # (x, y, t)
+    for i in range(len(smooth_minutia)):   
+        print(i, (sorted_dist[i], smooth_minutia[i]))
+    
     
     # Begin from a random point of the letter if there is no minutia (letter 'o' for example)
     if not smooth_minutia:
@@ -131,15 +190,14 @@ def freeman_encode(skel_img, cache):
         smooth_minutia.append(first)
     
     for point in smooth_minutia:
+        # print("\ncache : " + str(cache))
+        # print("new : " + str(point))
         curr_p = point
-        code.append(42)
         cache.append((point[0], point[1]))
+        code += freeman_travel(skel_img, smooth_minutia, curr_p, cache)
         
-        print(curr_p)
-        print(freeman_travel(skel_img, smooth_minutia, curr_p, cache))
-        print("cache : " + str(cache) + "\n")
-        
-    return code
+    
+    return encode(code)
     
     
             
@@ -185,18 +243,22 @@ def minutia_extraction(im_skeleton):
 # Coloring minutia pixels in red for visualization
 def draw_minutia(minutia, im_skeleton, color):
     im_skeleton_color = gray2rgb(im_skeleton)
-    # Looping through the minutias collected
+    # print("minutia : ")
+    # print(minutia)
+    ## Looping through the minutias collected
     for m in minutia:
-        # Colorize the pixel in red
+        ## Colorize the pixel in red
+        # print("minutia : ")
+        # print(m)
         im_skeleton_color[m[0]][m[1]] = color
     return im_skeleton_color
 
 
 
 # Distance between two points of an image
-# LA FRAUDA !
-# def euclidean_distance_minutia(m1, m2):
-#     return math.sqrt((m1[0] - m2[0])*(m1[0] - m2[0]) + (m1[1] - m2[1])*(m1[1] - m2[1]))
+# LA FRAUDA (en fait pas) !
+def euclidean_distance_minutia(m1, m2):
+    return math.sqrt((m1[0] - m2[0])*(m1[0] - m2[0]) + (m1[1] - m2[1])*(m1[1] - m2[1]))
 
 
 
@@ -216,16 +278,16 @@ def smoothing(skel_img, minutia, threshold):
 
     # Case where only ending points
     if smooth_minutia == []:
-        return minutia
+        return remove, minutia
     else:
         for m in ending_points:
             # get distance between the ending points and the first other point encountered (across the shape)
             # the cache is set with the current ending point to prevent going back
-            dist = pt_distance(skel_img, minutia, (m[0], m[1]), [(m[0], m[1])])
+            dist = freeman_travel(skel_img, minutia, (m[0], m[1]), [(m[0], m[1])])
             
-            if dist < threshold:
+            if len(dist) < threshold:
                 minutia.remove(m)
-                remove.append(m)
+                remove += dist
 
     return remove, minutia
 

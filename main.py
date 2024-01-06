@@ -2,7 +2,7 @@ from functions import *
 
 
 
-PATH = "dataset/dataset_caracters/01_Numeric_police12"
+PATH = "dataset/dataset_caracters/03_PS600_police12"
 
 def affiche_tab(tab):
     titles = [i+1 for i in range(10)]
@@ -21,29 +21,34 @@ def main():
         
     char_tab = img_tab(pathtab, 'x')
     car_tab = []
-    test_tab = []
+    # test_tab = []
+    code_tab = []
     
     min_tab = []
     for char in char_tab:
         inv = invert_image(char)
         skel = skeletonize(inv, method = "lee")
         
-        # Affichage / Debug
+        ## Affichage / Debug
         car_tab.append(draw_minutia(minutia_extraction(skel), skel, (255, 0, 0)))
-        ret, min = smoothing(skel, minutia_extraction(skel), 15)
+        ret, min = smoothing(skel, minutia_extraction(skel), 12)
         min_tab.append(draw_minutia(min, skel, (255, 0, 0)))
         
-        # Freeman encoding
+        ## Freeman encoding
         cache = []
-        print(freeman_encode(skel, cache))
+        code = freeman_encode(skel, cache)
+        code_tab.append(code)
         # test = draw_minutia(cache, skel, (0, 255, 0))
         # test_tab.append(test)
         # Post treating the freeman code
-        break
     
+    for code in code_tab:
+        print(code)
+    
+    affiche_tab(char_tab)
     affiche_tab(car_tab)
     affiche_tab(min_tab)
-    affiche_tab(test_tab)
+    # affiche_tab(test_tab)
     
     
 if __name__ == "__main__":
