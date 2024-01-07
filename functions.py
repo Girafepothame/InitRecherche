@@ -102,7 +102,16 @@ def img_tab(tab, car):
 
 # Returnsthe next white pixel neighbouring p, starting with direct neighbours
 def get_next(img, p, cache):
-    
+    """Iterate in the neighbours of a point to find the right path to foloow
+
+    Args:
+        img (np array): the image we are working with
+        p (tuple): the current point we are treating
+        cache (array/list): a list of the point we already checked -> don't go back and ignore the points we smoothed earlier
+
+    Returns:
+        tuple: return the next point we will be treating, or None if there is no neighbours that are not in the cache
+    """
     x = p[0]
     y = p[1]
     
@@ -123,6 +132,17 @@ def get_next(img, p, cache):
 
 
 def freeman_travel(img, minutia, pt, cache):
+    """Recusrive function to travel through the white pixels of the character
+
+    Args:
+        img (np array): the current image
+        minutia (array/list): a list of the 'key' points in the shape (ending point, bifucating ...)
+        pt (tuple): the current point
+        cache (array/list): a list of the point we already checked -> don't go back and ignore the points we smoothed earlier
+
+    Returns:
+        _type_: _description_
+    """
     # print(minutia)
     point = get_next(img, pt, cache)
     # print(point)
@@ -144,8 +164,18 @@ def freeman_travel(img, minutia, pt, cache):
 
 
 # In case there is no "starting point"
-def first_position_value(arr, value, size):
-    indexes = np.where(arr == value)[0]
+def first_position_value(img, value, size):
+    """finding the first point of the shape in case there is no minutias detected
+
+    Args:
+        img (np array): the image flattened (transformed into a 1-dim array)
+        value (int): value of the pixel
+        size (tuple): shape of the image
+
+    Returns:
+        tuple: a point referred as 'starting point'
+    """
+    indexes = np.where(img == value)[0]
     if not np.any(indexes):
         exit
 
@@ -208,14 +238,14 @@ def encode(code):
 
 def freeman_encode(skel_img, cache):
     
-    """_summary_
+    """Encode the image by iterating on the remaning minutias after smoothing
 
     Args:
-        skel_img (_type_): _description_
-        cache (_type_): _description_
+        skel_img (array): the current image
+        cache (list): a list of the point we already checked
 
     Returns:
-        _type_: _description_
+        string: The freeman code generated and treated
     """
     
     code = []
@@ -251,6 +281,14 @@ def freeman_encode(skel_img, cache):
     
             
 def minutia_extraction(im_skeleton):
+    """Itetrate through an image and retrieve the 'minutias' among the pixels
+
+    Args:
+        im_skeleton (np array): the image we are working with
+
+    Returns:
+        array/list: List of tuples corresponding to the minutias (x, y, CN)
+    """
     minutia = []
     h = im_skeleton.shape[0]
     w = im_skeleton.shape[1]
@@ -291,21 +329,26 @@ def minutia_extraction(im_skeleton):
 
 # Coloring minutia pixels in red for visualization
 def draw_minutia(minutia, im_skeleton, color):
+    """colorize the wanted pixels of an image
+
+    Args:
+        minutia (list/array): the list of pixels we want to colorize
+        im_skeleton (np array): current image
+        color (tuple): BGR color (B, G, R)
+
+    Returns:
+        _type_: _description_
+    """
     im_skeleton_color = gray2rgb(im_skeleton)
-    # print("minutia : ")
-    # print(minutia)
     ## Looping through the minutias collected
     for m in minutia:
-        ## Colorize the pixel in red
-        # print("minutia : ")
-        # print(m)
+        
         im_skeleton_color[m[0]][m[1]] = color
     return im_skeleton_color
 
 
 
-# Distance between two points of an image
-# LA FRAUDA (en fait pas) !
+# Distance between two points of an image (pythagore)
 def euclidean_distance_minutia(m1, m2):
     return math.sqrt((m1[0] - m2[0])*(m1[0] - m2[0]) + (m1[1] - m2[1])*(m1[1] - m2[1]))
 
@@ -313,6 +356,16 @@ def euclidean_distance_minutia(m1, m2):
 
 # delete serif (small parts of character) which size is inferior to the threshold - return the table of the minutia where the code will be generated between
 def smoothing(skel_img, minutia, threshold):
+    """create a table of pixels (coordinates) that we want to ignore afterward by calculating the distance between two minutias
+
+    Args:
+        skel_img (np array): current image
+        minutia (list): list of tuples
+        threshold (int): the threshold under which we ignore a part of image
+
+    Returns:
+        2 list: list of the pixel we need to remove, list of the minutias after deleting the bad ones
+    """
     smooth_minutia = []
     ending_points = []
     remove = []
