@@ -30,14 +30,15 @@ def main():
         car_tab.append(draw_minutia(minutia_extraction(skel), skel, (255, 0, 0)))
         ret, min = smoothing(skel, minutia_extraction(skel), 12)
         min_tab.append(draw_minutia(min, skel, (255, 0, 0)))
+        # test = draw_minutia(cache, skel, (0, 255, 0))
+        # test_tab.append(test)
+        # Post treating the freeman code
         
         ## Freeman encoding
         cache = []
         code = freeman_encode(skel, cache)
         code_tab.append(code)
-        # test = draw_minutia(cache, skel, (0, 255, 0))
-        # test_tab.append(test)
-        # Post treating the freeman code
+        
     
     for code in code_tab:
         print(code)

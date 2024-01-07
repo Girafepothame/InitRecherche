@@ -227,8 +227,9 @@ def encode(code):
             # calculating index from a 2-dim array to a 1-dim array
             index = (y + 1)*3 + x + 1
             
-            # if prev_index != index:
-            res += str(dir[index])
+            # reduce the size of the code if same code repeats
+            if prev_index != index:
+                res += str(dir[index])
                 
             prev_index = index
                     
